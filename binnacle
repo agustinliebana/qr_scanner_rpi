@@ -1,0 +1,36 @@
+10/09 - Elegimos el proyecto 15.2: Sacar turnos y poder determinar la veracidad del pasajero a través de la generación y lectura de identificadores generados con pdf417.
+
+13/09 - Luego de investigar sobre la implementación, barajamos la posibilidad de utilizar una cámara para decodificar el pdf417.
+
+18/09 - Después de indagar sobre los precios de los lectores 2D compatibles con pdf417 parece que la elección de la cámara es la única viable.
+
+24/09 - Nos reunimos para decidir la arquitectura de las comunicaciones entre la RaspBerry Pi y el webserver, como así también empezar a modelar el problema a nivel base de datos y Clases Java. Se termina optando por comunicar a ambos por protocolo HTTP utilizando arquitectura API Rest. Y de tecnologías usar hibernate, spring y jersey.
+
+25/09 - Las herramientas disponibles para decodificar pdf417 son pagas y las alternativas opensource no operan con dicha codificación.
+
+30/09 - Se genera el primer modelo de la DB, decidimos utilizar docker para correr el motor de MySQL, bajamos la imagen con versión 8.0 e instalamos apache maven.
+
+01/10 - En una call con Gastón se determinó reemplazar el pdf417 por código QR, el cual ya está más maduro y tenemos disponibles varias librerías para utilizar.
+
+3/10 - Empezamos a inyectar dependencias en el pom.xml del proyecto para poder incorporar las librerías de hibernate, spring y para comunicación con la DB.
+
+05/10 - Se instaló y probó con éxito la librería ZBAR en una laptop logrando decodificar códigos QR.
+
+10/10 - Con una lógica similar al experimento realizado en la notebook, se intentó correr dicho programa en la Raspberry Pi con una cámara web usb pero el bajo rendimiento obtenido hizo que no funcionara adecuadamente.
+
+14/10 - Creamos los primeros Spring Beans en el archivo ApplicationContext.xml, en los cuales generamos la conexión a la DB y inicializamos la SessionFactory de Hibernate, también creamos la primer clase DAO para la tabla de pasajeros junto con su clase Model y Service en java 11.
+
+15/10 - Después de optimizar algunas cuestiones relacionadas a la entrada de video generada por la webcam se mejoró el rendimiento. Sin embargo, sigue sin dar frutos.
+
+18/10 - Surge la posibilidad de proponer la compra del módulo de cámara de la rpi, ya que gracias a su interfaz CSi promete rendimientos muy superiores a los conseguidos por la webcam: no solo esquiva el overhead del USB sino que se conecta directamente al GPU del SoC.
+
+20/10 - Aparece el gran OpenCV. Este framework haciendo uso de OpenCL y deep learning logra un rendimiento increíble para decodificar QRs. It’s alive!! Continuamos con la webcam.
+
+22/10 - Ya funcionando un pequeño programa hecho en python que se encarga de buscar y decodificar nuevos códigos QRs y almacenarlos en un archivo histórico.
+
+23/10 - Se empieza a crear un test para ir corroborando el funcionamiento de Hibernate y Spring, se empieza a realizar los mappeos de hibernate a la clase Model de pasajeros.
+
+26/10 - Se empiezan a  agregar los Models restantes para poder representar y persistir los datos de la base de datos en código java.
+
+06/11 - Se terminan de realizar los mapeos y tests para corroborar su correcto funcionamiento e implementación. Se decide centralizar las clases dedicadas a brindar servicios a dos clases, UserService la cual será la encargada de implementar toda la lógica correspondiente al pasajero (el usuario) y por otro lado está el ReservationService el cual se encarga de implementar la lógica de todo lo relacionado a reserva de pasajes, horarios de combis y viajes.
+
