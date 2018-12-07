@@ -34,3 +34,26 @@
 
 06/11 - Se terminan de realizar los mapeos y tests para corroborar su correcto funcionamiento e implementación. Se decide centralizar las clases dedicadas a brindar servicios a dos clases, UserService la cual será la encargada de implementar toda la lógica correspondiente al pasajero (el usuario) y por otro lado está el ReservationService el cual se encarga de implementar la lógica de todo lo relacionado a reserva de pasajes, horarios de combis y viajes.
 
+10/11 - Se crea el PublicController con un /healthcheck y una primera version del /availability
+
+14/11 - Se decidio hacer un refactor del diseño de la base para solucionar problemas al identificar los viajes y lo pasajes disponibles para cada combi.
+
+18/11 - Detectamos un problema de time shifting generado a raiz de la configuracion de la Time Zone de hibernate (al almacenar interpretaba UTC pero luego al parsear de la db utilizaba UTC-3). Se soluciono seteando la tz en la conexion a la base de datos.
+
+22/11 - Se implementó la autenticación de usuario y el seteo de cookies con el token en /signin.
+
+24/11 - Funcionales los endpoints responsables de efectuar la reserva de un lugar para un viaje en cierta parada /journey/{journeyId}/ticket/{stopId} y el validador de tickets /ticket/{ticketId}/journey/{journeyId}/check. 
+
+26/11 - Surgen serias complicaciones para salir hacia afuera con el webserver. El problema se debe a que dicho server se encuentra en una máquina virtual de Hyper-V y las soluciones probadas que incluyen desde port-forwarding hasta Conmutadores Virtuales Internos no han dado frutos. 
+
+28/11 - Se decide avanzar con la RPi. El programa ya "valida" el ticket leido. Las comillas se deben a que la respuesta del webserver fue mockeada con un JSON-Server, sin embargo el proceso de obtención de información de un servidor remoto y la deserialización de esta información - asi como su utilización - se realiza con éxito. 
+
+30/11 - Debido a la falta de materiales (no contamos con ningún tipo de pantalla), se decide implementar un sistema rudimentario de LEDs con un código de colores estándar tipo semáforo para reportar hacia afuera lo mínimo indispensable de su estado actual de funcionamiento.
+
+02/12 - La pobre decisión de los diseñadores de la RPi al incluir pines de GPIO en vez de conectores complicó bastante el setup. Se evalua la posibilidad de incluir un buzzer para otorgar un feedback sonoro adicional.
+
+04/12 - Se decidio delegar la responsabilidad de generar el código QR del ticket correspondiente a la reserva al front. Para esto se pretende utilizar la librería qrcode.js.
+
+05/12 - Seguimos con la lucha de poder comunicar por LAN a la máquina virtual, teniendo en cuenta la recomendación de nuestro ayudante de no depender de la conectividad de Internet para la muestra. Lamentablemente esta y otras complicaciones terminaron delegando el desarrollo del Frontend al punto que no estará disponible para la entrega de mañana. Teniendo en cuenta que nuestra muestra es el 13/12, preferimos dejar la parte estructural funcionando a la perfección, delegando el desarrollo de esta ultima parte pasada esta entrega.
+
+06/12 - La RPi reporta su estado utilizando el código de colores y su interpretación es aceptable. Al margen de ello, se incluyen logueos completos tanto a nivel INFO como DEBUG y se decidió mantener el archivo de tickets validados para asi conformar un log.
