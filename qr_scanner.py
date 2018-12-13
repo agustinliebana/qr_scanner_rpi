@@ -8,29 +8,35 @@ import cv2
 import requests
 import json
 import RPi.GPIO as GPIO
-import time
 
 # Mocks de respuestas del webserver para validaciones positivas y negativas
 okUrl = 'http://www.json-generator.com/api/json/get/bUBTBcgqUO'
 notOkUrl = 'http://www.json-generator.com/api/json/get/bUQJTmEgpu'
 
 # Constantes de configuración
-SERVER = '192.168.100.2:8080/decoder'
-AUTH_TOKEN = 'b67330ebbcdfa68729893f7e1f75840c'
-USER_ID      = 27
-GREEN_LED    = 18
+SERVER_URL = 'http://192.168.0.3:9290/api/v1'
+AUTH_TOKEN = 'terminal'
+USER_ID      = '27'
+GREEN_LED    = 20
 RED_LED      = 12
-YELLOW_LED   = 11
-STAND_BY_LED = 32
+YELLOW_LED   = 21
+STAND_BY_LED = 18
+INTERVAL     = 5
 
 # Configura los pines correspondientes a los LEDs como salidas y su valor inicial
 GPIO.setmode(GPIO.BCM)
+GPIO.setwarnings(False)
 GPIO.setup(GREEN_LED, GPIO.OUT, initial=GPIO.LOW)
 GPIO.setup(RED_LED, GPIO.OUT, initial=GPIO.LOW)
 GPIO.setup(YELLOW_LED, GPIO.OUT, initial=GPIO.LOW)
 GPIO.setup(STAND_BY_LED, GPIO.OUT, initial=GPIO.HIGH)
-GPIO.setwarnings(False)
 
+def logAndUpdate(data):
+    csv.write('{} - {}\n'.format(datetime.datetime.now(), data))
+    # Flushea el buffer
+    csv.flush()
+    # Actualiza el set
+    found.add(data)
 
 # Método para obtener información del webserver (actualmente sin uso aunque fue pensado para generar un SNAPSHOT de la db para ser útil en caso de falta de conectividad GSM/LTE)
 def getData(path):
@@ -41,26 +47,55 @@ def getData(path):
 
 # Valida el ticket leido por QR con el webserver
 def postData(ticket, journey):
-    url = SERVER + '/ticket/{0}/journey/{1}/check'.format(ticket, journey)
-    print('[DEBUG] Trying to hit {} to validate the ticket'.format(url))
-    payload = {}
-    headers = {
-        'passengerId': USER_ID,
-        'authToken': AUTH_TOKEN
-    }
-    requestData = requests.post(url, data=json.dumps(payload), headers=headers)
-    print('[DEBUG] Server response: {}'.format(requestData.status_code))
-    return requestData.json()
+    try:
+        url = SERVER_URL + '/ticket/{0}/journey/{1}/check'.format(ticket, journey)
+        print('[DEBUG] Trying to hit {} to validate the ticket'.format(url))
+        payload = {}
+        headers = {
+            'passengerId': USER_ID,
+            'authToken': AUTH_TOKEN
+        }
+        requestData = requests.post(url, data=json.dumps(payload), headers=headers)
+        print('[DEBUG] Server response: {}'.format(requestData.status_code))
+    except:
+        print('[WARN] Server ERROR')
+    else:
+        return requestData.json()
+    
+    return None
+
+def jsonIzer(jsonString):
+    return '['+jsonString+']'
+
+def ledColor(x):
+    return {
+        20 : 'GREEN',
+        12 : 'RED',
+        21 : 'YELLOW',
+    }[x]
+
+def ledOn(led):
+    print('[DEBUG] {} led ON'.format(ledColor(led)))
+    GPIO.output(led, GPIO.HIGH)
+    
+def ledOff(led):
+    print('[DEBUG] {} led OFF'.format(ledColor(led)))
+    GPIO.output(led, GPIO.LOW)
 
 # Parsea la respuesta de la validación del servidor y devuelve el estado de la misma
 def parseValidation(raw):
-    objectArray = json.loads(raw)
+    jArray = jsonIzer(raw)
+    print('[DEBUG] JSONnizer result: {}'.format(jArray))
+    objectArray = json.loads(jArray)
     status = ''
     for o in objectArray:
+        print('[INFO] Server response:')
+        print('******************************************')
         print('[INFO] Ticked ID: {}'.format(o.get('ticketId')))
         print('[INFO] Journey ID: {}'.format(o.get('journeyId')))
         status += o.get('status')
         print('[INFO] Status: {}'.format(status))
+        print('******************************************')
     return status
 
 # Parsea una url, utilizado en una versión previa aunque se decidió dejarlo hasta confirmar su remoción.
@@ -70,6 +105,20 @@ def parseUrl(raw):
     for o in objectArray:
         url += o.get('url')
     return url
+
+def parseQr(raw):
+    jArray = jsonIzer(raw)
+    print('[DEBUG] JSONnizer result: {}'.format(jArray))
+    objectArray = json.loads(jArray)
+    return objectArray[0].get('ticketId'), objectArray[0].get('journeyId')
+
+def shutdown():
+    # Cierra el decoder
+    print('[INFO] Shutting down...')
+    csv.write('{} - System Shut Down!\n'.format(datetime.datetime.now()))
+    csv.close()
+    cv2.destroyAllWindows()
+    vs.stop()
 
 
 # Setea la salida por default a un archivo csv (historial)
@@ -85,10 +134,11 @@ vs = VideoStream(src=0).start()
 time.sleep(2.0)
 
 # Archivo de salida
-csv = open(args['output'], 'w')
+csv = open(args['output'], 'a')
 # Cache de QRs leidos
 found = set()
 
+csv.write('{} - System Up!\n'.format(datetime.datetime.now()))
 print('[INFO] Starting decoder...')
 
 # Loopea sobre el stream de video
@@ -111,50 +161,51 @@ while True:
 
         # Imprime el texto decodificado
         text = "{}".format(barcodeData)
+        print('[DEBUG] QR content: {}'.format(text))
         cv2.putText(frame, text, (x, y - 10),
                     cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255), 2)
 
         # Filtro QRs ya leidos
         if barcodeData not in found:
-            print('[DEBUG] YELLOW led ON')
-            GPIO.output(YELLOW_LED, GPIO.HIGH)
+            #print('[DEBUG] YELLOW led ON')
+            #GPIO.output(YELLOW_LED, GPIO.HIGH)
+            ledOn(YELLOW_LED)
             
-            csv.write('{},{}\n'.format(datetime.datetime.now(), barcodeData))
-            # Flushea el buffer
-            csv.flush()
-            # Actualiza el set
-            found.add(barcodeData)
+            logAndUpdate(barcodeData)
 
-            print('[DEBUG] found a new code: {}'.format(barcodeData))
+            print('[DEBUG] found a new code: {}'.format(barcodeData[0]))
+            
+            ticketId, journeyId = parseQr(barcodeData)
 
-            url = parseUrl(barcodeData)
+            data = postData(ticketId, journeyId)
+            
+            if data is not None:
+                print('[DEBUG] JSON response: {}'.format(data))
 
-            data = getData(url)
+                status = parseValidation(json.dumps(data))
 
-            status = parseValidation(json.dumps(data))
+                if status == 'OK':
+                    print('[INFO] Ticket approved.')
+                    ledOn(GREEN_LED)
+                else:
+                    print('[WARN] Invalid ticket for this journey.')
+                    ledOn(RED_LED)
+                    
+                time.sleep(INTERVAL/2)    
+                ledOff(YELLOW_LED)
+                time.sleep(INTERVAL)
 
-            if status == 'OK':
-                print('[INFO] Ticket approved.')
-                print('[DEBUG] GREEN led ON')
-                GPIO.output(GREEN_LED, GPIO.HIGH)
-            else:
-                print('[INFO] Invalid ticket for this journey.')
-                print('[DEBUG] RED led ON')
-                GPIO.output(RED_LED, GPIO.HIGH)
-
-            time.sleep(3)
-
-            print('[DEBUG] Leds OFF')
-            GPIO.output(GREEN_LED, GPIO.LOW)
-            GPIO.output(RED_LED, GPIO.LOW)
-            GPIO.output(YELLOW_LED, GPIO.LOW)
+                print('[DEBUG] Leds OFF')
+                ledOff(RED_LED)
+                ledOff(GREEN_LED)
         else:
-            print('[INFO] Ticket was alredy used.')
-            print('[DEBUG] RED led ON')
-            GPIO.output(RED_LED, GPIO.HIGH)
-            time.sleep(3)
-            print('[DEBUG] RED led OFF')
-            GPIO.output(RED_LED, GPIO.LOW
+            ledOn(RED_LED)
+            
+            if data is not None:
+                print('[INFO] Ticket was alredy used.')
+                
+            time.sleep(INTERVAL)
+            ledOff(RED_LED)
 
     # Manda el frame a la pantalla (debug)
     cv2.imshow('QR Scanner', frame)
@@ -164,8 +215,4 @@ while True:
     if key == ord("q"):
         break
 
-# Cierra el decoder
-print('[INFO] Shutting down...')
-csv.close()
-cv2.destroyAllWindows()
-vs.stop()
+shutdown()
