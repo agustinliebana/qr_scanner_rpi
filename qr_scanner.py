@@ -10,14 +10,14 @@ import json
 import RPi.GPIO as GPIO
 
 # Constantes de configuración
-SERVER_URL = 'http://192.168.0.3:9290/api/v1'
+SERVER_URL = 'http://192.168.0.106:9290/api/v1'
 AUTH_TOKEN = 'terminal'
 USER_ID      = '27'
 GREEN_LED    = 20
 RED_LED      = 12
 YELLOW_LED   = 21
 STAND_BY_LED = 18
-INTERVAL     = 5
+INTERVAL     = 4
 
 # Configura los pines correspondientes a los LEDs como salidas y su valor inicial
 GPIO.setmode(GPIO.BCM)
@@ -43,22 +43,20 @@ def getData(path):
 
 # Valida el ticket leido por QR con el webserver
 def postData(ticket, journey):
-    try:
-        url = SERVER_URL + '/ticket/{0}/journey/{1}/check'.format(ticket, journey)
-        print('[DEBUG] Trying to hit {} to validate the ticket'.format(url))
-        payload = {}
-        headers = {
-            'passengerId': USER_ID,
-            'authToken': AUTH_TOKEN
-        }
-        requestData = requests.post(url, data=json.dumps(payload), headers=headers)
-        print('[DEBUG] Server response: {}'.format(requestData.status_code))
-    except:
-        print('[WARN] Server ERROR')
+    url = SERVER_URL + '/ticket/{0}/journey/{1}/check'.format(ticket, journey)
+    print('[DEBUG] Trying to hit {} to validate the ticket'.format(url))
+    payload = {}
+    headers = {
+        'passengerId': USER_ID,
+        'authToken': AUTH_TOKEN
+    }
+    requestData = requests.post(url, data=json.dumps(payload), headers=headers)
+    statusCode = requestData.status_code
+    print('[DEBUG] Server response: {}'.format(statusCode))
+    if statusCode != 200:
+        return None
     else:
         return requestData.json()
-    
-    return None
 
 def jsonIzer(jsonString):
     return '['+jsonString+']'
