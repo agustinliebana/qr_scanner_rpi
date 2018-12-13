@@ -9,10 +9,6 @@ import requests
 import json
 import RPi.GPIO as GPIO
 
-# Mocks de respuestas del webserver para validaciones positivas y negativas
-okUrl = 'http://www.json-generator.com/api/json/get/bUBTBcgqUO'
-notOkUrl = 'http://www.json-generator.com/api/json/get/bUQJTmEgpu'
-
 # Constantes de configuración
 SERVER_URL = 'http://192.168.0.3:9290/api/v1'
 AUTH_TOKEN = 'terminal'
