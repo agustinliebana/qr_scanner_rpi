@@ -10,9 +10,9 @@ import json
 import RPi.GPIO as GPIO
 
 # Constantes de configuración
-SERVER_URL = 'http://192.168.0.20:9290/api/v1'
+SERVER_URL = 'http://181.231.69.210:9290/api/v1'
 AUTH_TOKEN = 'terminal'
-USER_ID      = '27'
+USER_ID      = '2'
 GREEN_LED    = 20
 RED_LED      = 12
 YELLOW_LED   = 21
@@ -59,8 +59,8 @@ def postData(ticket, journey):
             return requestData.json()
     except:
         print('[WARN] Server timeout! Aborting...')
-    finally:
         return None
+        
         
     
 
@@ -85,14 +85,13 @@ def ledOff(led):
 # Parsea la respuesta de la validación del servidor y devuelve el estado de la misma
 def parseValidation(raw):
     jArray = jsonIzer(raw)
-    print('[DEBUG] JSONnizer result: {}'.format(jArray))
     objectArray = json.loads(jArray)
 
     try:
         for o in objectArray:
             print('[INFO] Server response:')
             print('******************************************')
-            print('[INFO] Ticked ID: {}'.format(o.get('ticketId')))
+            print('[INFO] Ticket ID: {}'.format(o.get('ticketId')))
             print('[INFO] Journey ID: {}'.format(o.get('journeyId')))
             status = o.get('status')
             print('[INFO] Status: {}'.format(status))
@@ -170,7 +169,6 @@ while True:
 
         # Imprime el texto decodificado
         text = "{}".format(barcodeData)
-        print('[DEBUG] QR content: {}'.format(text))
         cv2.putText(frame, text, (x, y - 10),
                     cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255), 2)
 
@@ -182,11 +180,14 @@ while True:
             
             logAndUpdate(barcodeData)
 
-            print('[DEBUG] found a new code: {}'.format(barcodeData[0]))
+            print('[DEBUG] found a new code: {}'.format(barcodeData))
             
             ticketId, journeyId = parseQr(barcodeData)
-
-            data = postData(ticketId, journeyId)
+            
+            data = None
+            
+            if ((ticketId != None) or (journeyId != None)):
+                data = postData(ticketId, journeyId)
             
             if data is not None:
                 print('[DEBUG] JSON response: {}'.format(data))
