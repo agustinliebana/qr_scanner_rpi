@@ -10,7 +10,7 @@ import json
 import RPi.GPIO as GPIO
 
 # Constantes de configuración
-SERVER_URL = 'http://192.168.0.106:9290/api/v1'
+SERVER_URL = 'http://192.168.0.20:9290/api/v1'
 AUTH_TOKEN = 'terminal'
 USER_ID      = '27'
 GREEN_LED    = 20
@@ -50,13 +50,19 @@ def postData(ticket, journey):
         'passengerId': USER_ID,
         'authToken': AUTH_TOKEN
     }
-    requestData = requests.post(url, data=json.dumps(payload), headers=headers)
-    statusCode = requestData.status_code
-    print('[DEBUG] Server response: {}'.format(statusCode))
-    if statusCode != 200:
+    
+    try:
+        requestData = requests.post(url, data=json.dumps(payload), headers=headers, timeout=5)
+        statusCode = requestData.status_code
+        print('[DEBUG] Server response: {}'.format(statusCode))
+        if statusCode == 200:
+            return requestData.json()
+    except:
+        print('[WARN] Server timeout! Aborting...')
+    finally:
         return None
-    else:
-        return requestData.json()
+        
+    
 
 def jsonIzer(jsonString):
     return '['+jsonString+']'
@@ -81,16 +87,20 @@ def parseValidation(raw):
     jArray = jsonIzer(raw)
     print('[DEBUG] JSONnizer result: {}'.format(jArray))
     objectArray = json.loads(jArray)
-    status = ''
-    for o in objectArray:
-        print('[INFO] Server response:')
-        print('******************************************')
-        print('[INFO] Ticked ID: {}'.format(o.get('ticketId')))
-        print('[INFO] Journey ID: {}'.format(o.get('journeyId')))
-        status += o.get('status')
-        print('[INFO] Status: {}'.format(status))
-        print('******************************************')
-    return status
+
+    try:
+        for o in objectArray:
+            print('[INFO] Server response:')
+            print('******************************************')
+            print('[INFO] Ticked ID: {}'.format(o.get('ticketId')))
+            print('[INFO] Journey ID: {}'.format(o.get('journeyId')))
+            status = o.get('status')
+            print('[INFO] Status: {}'.format(status))
+            print('******************************************')
+        return status
+    except:
+        print('[DEBUG] Cannot validate this QR.')
+        return None
 
 # Parsea una url, utilizado en una versión previa aunque se decidió dejarlo hasta confirmar su remoción.
 def parseUrl(raw):
@@ -103,8 +113,13 @@ def parseUrl(raw):
 def parseQr(raw):
     jArray = jsonIzer(raw)
     print('[DEBUG] JSONnizer result: {}'.format(jArray))
-    objectArray = json.loads(jArray)
-    return objectArray[0].get('ticketId'), objectArray[0].get('journeyId')
+    try:
+        objectArray = json.loads(jArray)
+        return objectArray[0].get('ticketId'), objectArray[0].get('journeyId')
+    except:
+        print('[DEBUG] Cannot parse this QR.')
+        return None, None
+
 
 def shutdown():
     # Cierra el decoder
